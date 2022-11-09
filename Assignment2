@@ -1,0 +1,74 @@
+# Insert chapter 2 title here
+
+*Describe the work you have done this week and summarize your learning.*
+
+- Describe your work and results clearly. 
+- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
+- Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
+
+```{r}
+date()
+```
+
+Here we go again...
+#data we are using is learning2014
+learning2014
+dim(learning2014) #it has 166 observations with 7 variables
+names(learning2014) #so
+#measuring  "gender"   "age"      "attitude" "deep"     "stra"     and  "surfpoints" 
+learning2014
+
+library(ggplot2)
+  
+  #Show a graphical overview of the data and show summaries of the variables in the data
+  pairs(learning2014[-1])
+  summary(learning2014)
+  sum(as.numeric(learning2014$gender=="M")) #56
+  56/166 #0.337
+  #Describe and interpret the outputs, commenting on the distributions of the variables and the relationships between them.
+  #well, mean age of subjects is 25.2 years [IQR 21.0-27.0 years], 33.7% are male, median attitude was 3.1, deep 3.68, stra 3.1, surf 2.79 and scores 23.0 [19.0-27.8]
+  #distributions are shown
+  
+  #Choose three variables as explanatory variables and fit a regression model where exam points is the target (dependent, outcome) variable. Show a summary of the fitted model and comment and interpret the results. Explain and interpret the statistical test related to the model parameters. If an explanatory variable in your model does not have a statistically significant relationship with the target variable, remove the variable from the model and fit the model again without it.
+  
+  #I will use linear regression models and spearmans correlation test (dont know if normally distributed and too lazy to check)
+
+cor.test(learning2014$attitude, learning2014$points, method="spearman")$p.value #p<E-8
+summary(lm(learning2014$points~learning2014$attitude)) #summary for model (points = k*attitude)
+summary(lm(learning2014$points~learning2014$age) #summary for model (points = k*age)
+summary(lm(learning2014$age~learning2014$attitude)) #summary for model (points = k*deep)
+#in this case, we see correlations for parameters age and attitude, but not for deep
+#so instead, lets try attitude~ssurf?
+cor.test(learning2014$attitude, learning2014$surf) #p=0.02368..., fo found correlation
+summary(lm(learning2014$attitude~learning2014$surf)) #negative correlation here...
+
+#so, we found associations between scores and attitude and age, as well as between attitude and surf. Linear regression coeffieients are shown in summaries above. 
+
+#Using a summary of your fitted model, explain the relationship between the chosen explanatory variables and the target variable (interpret the model parameters). Explain and interpret the multiple R-squared of the model.
+
+ #I assume I can now choose just one model? Lets go with points and attitude
+ 
+ ggplot(data = learning2014, aes(x = attitude, y = points)) + 
+  geom_point(color='blue') + ggtitle("How attitude affects score") + 
+  geom_smooth(method = "lm", se = FALSE) #draws the plot nicely!
+  
+  #so we have a lot, with y axis in points and x axis in attitude
+  #clearly the higher points in attitude, higher the score (p value below for correlation)
+  #regression line in blue for correlation
+  
+  summary(lm(learning2014$points~learning2014$attitude))
+  #estimates for R-squared regression line: 3.5255 (std. erorr 0.0567), p<E-8
+  #p value for null-hypothesis r=0 (no correlation)
+  #so we see fairly propable positive correlation for these two
+  
+  #Produce the following diagnostic plots: Residuals vs Fitted values, Normal QQ-plot and Residuals vs Leverage. Explain the assumptions of the model and interpret the validity of those assumptions based on the diagnostic plots.
+  
+  m <- lm(points ~ attitude, data = learning2014)
+my_model2 <- lm(points ~ attitude + stra, data = learning2014) 
+
+par(mfrow = c(2,2))
+plot(my_model2)
+qqnorm(m)
+plot(m)
+
+#here you go, four plots instead of three (scale-location as extra). Model assumes linearity between points and attitude and between points and attitude/stra. In leverage scale we can see that this prediction can well be challenged, but overall these assumptions seem valid (at least association can easily be accepted)
