@@ -3,7 +3,7 @@
 
 install.packages("usethis")
 usethis::create_github_token()
-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
+#token poistettu tästä
 gitcreds::gitcreds_set()
 
 lrn14 <- read.table("http://www.helsinki.fi/~kvehkala/JYTmooc/JYTOPKYS3-data.txt", sep="\t", header=TRUE)
