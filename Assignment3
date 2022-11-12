@@ -1,0 +1,170 @@
+#Chapter 3.Rmd
+#11.11.22 Aleksi Tarkkonen
+
+#Create a new R Markdown file and save it as an empty file named 'chapter3.Rmd'. Then include the file as a child 
+#file in your 'index.Rmd' file (similarily to 'chapter1.Rmd' and 'chapter2.Rmd'). Perform the following analysis 
+#in the chapter3.Rmd file. DONE
+
+#Read the joined student alcohol consumption data into R either from your local folder (if you completed the 
+#Data wrangling part) or from this url (in case you got stuck with the Data wrangling part): 
+#https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/alc.csv
+#(In the above linked file, the column separator is a comma and the first row includes the column names). 
+#Print out the names of the variables in the data and describe the data set briefly, 
+#assuming the reader has no previous knowledge of it. There is information related to the data here. (0-1 point)
+
+print(alc)
+names(alc)
+#gives  [1] "school"     "sex"        "age"        "address"    "famsize"    "Pstatus"    "Medu"       "Fedu"      
+#[9] "Mjob"       "Fjob"       "reason"     "guardian"   "traveltime" "studytime"  "schoolsup"  "famsup"    
+#[17] "activities" "nursery"    "higher"     "internet"   "romantic"   "famrel"     "freetime"   "goout"     
+#[25] "Dalc"       "Walc"       "health"     "failures"   "paid"       "absences"   "G1"         "G2"        
+#[33] "G3"         "alc_use"    "high_use"
+
+dim(alc) #370 observations with 35 variables
+
+#The purpose of your analysis is to study the relationships between high/low alcohol consumption and 
+#some of the other variables in the data. To do this, choose 4 interesting variables in the data and 
+#for each of them, present your personal hypothesis about their relationships with alcohol consumption. (0-1 point)
+
+#Lets try sex, age, failures and absences
+#men are usually more aggressive, so I'd assume they belong more often to high_use category
+#age, in this age group I hope 18 year olds drink more than 15 year olds... 
+#failures will surely have positive correlation with high use, I mean c'mon
+#absences should have association, although I dont know does this mean absences from alcohol or from work or from school
+
+#Numerically and graphically explore the distributions of your chosen variables and their relationships with 
+#alcohol consumption (use for example cross-tabulations, bar plots and box plots). 
+#Comment on your findings and compare the results of your exploration to your previously stated hypotheses. 
+#(0-5 points)
+
+#total observations 370 as previously mentioned
+use<-alc$alc_use
+mean(alc$age) #16.58 years
+sd(alc$age) #1.1 years
+sum(as.numeric(alc$sex=="M")) #175 males, thats 47.3%
+median(alc$failures) #is zero, so how many failures total.... lets see distribution
+table(alc$failures) #zero failures: 325, one: 24, two: 17 and three failures: 4
+
+mean(alc$absences) #4.51
+sd(alc$absences) #5.5, so fairly high distribution, perhaps better to use median and IQR instead
+median(alc$absences) #median 3
+quantile(alc$absences) #IQR 1-6, but some have over 40 absences
+abs<-alc$absences
+mfrow=c(2,2)
+boxplot(alc$alc_use[sex=="M"], alc$alc_use[sex=="F"], names=c("men", "women"), ylab="Alcohol consumption", 
+        main="Difference between men and women", col=c("lightblue", "pink"))
+boxplot(use[alc$age==15], use[alc$age==16], use[alc$age==17], use[alc$age==18], use[alc$age==19], use[alc$age==20],
+        names=c(15:20), main="Age", ylab="Alcohol consumption", 
+        col=c("cyan1", "cyan2", "cyan3", "lightblue1", "lightblue2", "lightblue3"))
+boxplot(use[alc$failures==0], use[alc$failures==1], use[alc$failures==2], use[alc$failures==3],
+        main="Failures", col=c("cyan1", "cyan2", "cyan3", "lightblue3"), ylab="Alcohol consumption", names=c(1:4))
+boxplot(use[abs==0], use[abs>0&abs<3], use[abs>2&abs<6], use[abs>5&abs<10], use[abs>9], main="Absences", ylab="Alcohol consumption")
+
+#In this plots, some observations
+#Women consume more alcohol on average, but the difference does not seem too big. So my hypothesis was incorrect! Perhaps I did not take this age-group into consideration
+#Consumption of alcohol increasess from ages 15-16-17, then it starts to decrease at 18-19-20
+#More alcohol consumption seems to be associated with more failures, although this is not a statistical test for it
+#Those with alc_use>9 have more absences
+
+#Use logistic regression to statistically explore the relationship between your chosen variables and the 
+#binary high/low alcohol consumption variable as the target variable. Present and interpret a summary of 
+#the fitted model. Present and interpret the coefficients of the model as odds ratios and provide confidence 
+#intervals for them. Interpret the results and compare them to your previously stated hypothesis. Hint: If 
+#your model includes factor variables see for example the RHDS book or the first answer of this stackexchange 
+#thread on how R treats and how you should interpret these variables in the model output (or use some other 
+#resource to study this). (0-5 points)
+
+failures<-alc$failures
+absences<-abs
+sex<-alc$sex
+age<-alc$age
+m <- glm(high_use ~ age + failures + absences + sex, data = alc, family = "binomial")
+OR <- coef(m) %>% exp
+CI<-confint(m)
+cbind(OR, CI)
+summary(m)
+
+#So, we have a few interesting results. In this binary model of four variables, three are significant
+#High alcohol consumption (defined before) associates with failures (OR 1.76 [95% CI 0.156-0.990], p=0.0075),
+#with absences (OR 1.096 [0.0466-0.139], p<0.001) and with sex (OR 2.72 [0.521-1.494], p<0.001).
+#Age was not associated (p=0.302) in this model.
+
+#Comments to my hypotheses: age did not associate in this multivariate model, perhaps I could find some association
+#in simple linear regression or by comparing groups age<17 and age≥17. At least hopefully so!
+#Failures had strong association, as expected. Abcenses was expected as well, here association was negatice 
+# i.e. more alcohol~less absences, so I presume it means absences from lectures etc. In case it means absence from
+#alcohol, it is kinf of a tautology...
+#and male sex was associated with high consumption, although on average women drink a bit more in these age groups.
+
+
+#Using the variables which, according to your logistic regression model, had a statistical relationship with 
+#high/low alcohol consumption, explore the predictive power of you model. Provide a 2x2 cross tabulation of 
+#predictions versus the actual values and optionally display a graphic visualizing both the actual values and 
+#the predictions. Compute the total proportion of inaccurately classified individuals (= the training error) 
+#and comment on all the results. Compare the performance of the model with performance achieved by some simple 
+#guessing strategy. (0-3 points)
+
+library(dplyr)
+library(ggplot2)
+alc <- mutate(alc, probability = predict(m, type = "response"))
+alc <- mutate(alc, prediction = probability > 0.5)
+table(high_use = alc$high_use, prediction = alc$prediction)
+
+#250, 9 and 76, 35. So in out actual data, 111 are high users and 259 are not
+#model predicts that, based on only these parameters, we would end up with 44 high users
+#out of these 44 it picks, 9 would be false positives (spesifity of 79.5%)
+#out of 326, 76 would be false negatives (sensitivity of 76.7%)
+#So the model is not that great really. But guessing everyone is hard too! We can easily guess for almost certain who is a hard drinker,
+#but similarly we could change the propability to >0.90 and that way decrease sensitivity. But is that what we really
+#want? Or is it more important to pick up all those in danger to drink too much? Or can we just focus on grades?
+
+#Bonus: Perform 10-fold cross-validation on your model. Does your model have better test set performance 
+#(smaller prediction error using 10-fold cross-validation) compared to the model introduced in the Exercise 
+#Set (which had about 0.26 error). Could you find such a model? (0-2 points to compensate any loss of points 
+#from the above exercises)
+
+# define a loss function (average prediction error)
+loss_func <- function(class, prob) {
+  n_wrong <- abs(class - prob) > 0.5
+  mean(n_wrong)
+}
+library(boot)
+cv <- cv.glm(data = alc, cost = loss_func, glmfit = m, K = 10)
+# average number of wrong predictions in the cross validation
+cv$delta[1] #0.2352 < 0.26 so our model is better!
+
+#Super-Bonus: Perform cross-validation to compare the performance of different logistic regression models 
+#(= different sets of predictors). Start with a very high number of predictors and explore the changes in 
+#the training and testing errors as you move to models with less predictors. Draw a graph displaying the 
+#trends of both training and testing errors by the number of predictors in the model. (0-4 points to compensate 
+#any loss of points from the above exercises)
+
+#previous model had 4 predictors:  age + failures + absences + sex
+alc
+#lets add some! m11 is a model with 11 variables, m10 with ten etc
+m11<- glm(high_use ~ age + failures + absences + sex+G1+health+goout+freetime+famrel+studytime+traveltime, data = alc, family = "binomial")
+m10<- glm(high_use ~ age + failures + absences + sex+G1+health+goout+freetime+famrel+studytime, data = alc, family = "binomial")
+m9<- glm(high_use ~ age + failures + absences + sex+G1+health+goout+freetime+famrel, data = alc, family = "binomial")
+m8<- glm(high_use ~ age + failures + absences + sex+G1+health+goout+freetime, data = alc, family = "binomial")
+m7<- glm(high_use ~ age + failures + absences + sex+G1+health+goout, data = alc, family = "binomial")
+m6<- glm(high_use ~ age + failures + absences + sex+G1+health, data = alc, family = "binomial")
+m5<- glm(high_use ~ age + failures + absences + sex+G1, data = alc, family = "binomial")
+m4<- glm(high_use ~ age + failures + absences + sex, data = alc, family = "binomial")
+m3<- glm(high_use ~ age + failures + absences, data = alc, family = "binomial")
+m2<- glm(high_use ~ age + failures, data = alc, family = "binomial")
+
+cv.glm(data = alc, cost = loss_func, glmfit = m11, K = 10)$delta[1] #0.2341
+cv.glm(data = alc, cost = loss_func, glmfit = m10, K = 10)$delta[1] #0.2405
+cv.glm(data = alc, cost = loss_func, glmfit = m9, K = 10)$delta[1] #0.2189
+cv.glm(data = alc, cost = loss_func, glmfit = m8, K = 10)$delta[1] #0.2108
+cv.glm(data = alc, cost = loss_func, glmfit = m7, K = 10)$delta[1] #0.2108
+cv.glm(data = alc, cost = loss_func, glmfit = m6, K = 10)$delta[1] #0.2405
+cv.glm(data = alc, cost = loss_func, glmfit = m5, K = 10)$delta[1] #0.2432
+cv.glm(data = alc, cost = loss_func, glmfit = m4, K = 10)$delta[1] #0.2405
+cv.glm(data = alc, cost = loss_func, glmfit = m3, K = 10)$delta[1] #0.2892
+cv.glm(data = alc, cost = loss_func, glmfit = m2, K = 10)$delta[1] #0.2946
+
+testing_errors<-c(0.2341, 0.2405, 0.2189, 0.2108, 0.2108, 0.2405, 0.2432, 0.2405, 0.2892, 0.2946)
+plot(testing_errors, ylab="Error", main="Testing errors")
+#So errors were smallest with 4-5 variables
+
